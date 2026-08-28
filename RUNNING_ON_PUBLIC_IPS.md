@@ -1,10 +1,22 @@
 # PulseTrack — Running on Public / LAN Addresses
 
+## LIVE PRODUCTION URLs (current)
+| App            | URL                                                  | Status |
+|----------------|------------------------------------------------------|--------|
+| Backend (API)  | https://pulsetrack-uh6i.onrender.com/api/v1/         | ✅ live |
+| Frontend (Web) | https://pulsetrackkk.vercel.app                     | ✅ live |
+| Android (Expo) | https://pulsetrack-uh6i.onrender.com (mobile API)    | config |
+
+- Backend CORS allows `https://pulsetrackkk.vercel.app` (verified).
+- Auto-migrate on boot: `wsgi.py` runs `migrate` so a fresh DB gets all tables.
+
+---
+
 All three apps are configured to bind to **all network interfaces** (`0.0.0.0`), so
 they are reachable from other devices on the LAN and (with a public tunnel / port
 forward) from the internet.
 
-## Services running now
+## Local dev services
 | App | URL (LAN) | URL (local) |
 |-----|-----------|-------------|
 | Django API backend | http://10.168.166.180:8000/api/v1/ | http://127.0.0.1:8000/api/v1/ |
