@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { TrendingUp, CheckCircle2, Gauge, Package, AlertTriangle, Zap } from "lucide-react";
 import axios from "axios";
 import { 
@@ -11,7 +11,7 @@ import {
 
 const getApiBase = () => {
   if (import.meta.env.MODE === 'development') return 'http://localhost:8000/api';
-  return 'https://pulsetrack-back.onrender.com/api';
+  return 'https://pulsetrack-uh6i.onrender.com/api';
 };
 
 export default function KPICards({ selectedTruck = null, selectedDriver = null, refreshTrigger = 0 }) {

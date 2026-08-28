@@ -61,7 +61,7 @@
       ]
     ],
     "extra": {
-      "apiBaseUrl": "https://pulsetrack-back.onrender.com/api/v1",
+      "apiBaseUrl": "https://pulsetrack-uh6i.onrender.com/api/v1",
       "locationUpdateInterval": 120000,
       "locationDistanceFilter": 50
     }

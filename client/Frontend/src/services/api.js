@@ -313,7 +313,7 @@ export const getTruckTrail = async (truckId, limit = 100) => {
 export const getTruckTrailWithDirections = async (truckId, limit = 200) => {
   try {
     // Use v1 API endpoint
-    const baseUrl = 'https://pulsetrack-back.onrender.com';
+    const baseUrl = 'https://pulsetrack-uh6i.onrender.com';
     const response = await axios.get(`${baseUrl}/api/v1/trucks/${truckId}/truck_trail_with_directions/`, { 
       params: { limit },
       withCredentials: true
@@ -615,7 +615,7 @@ export const predictTrafficMultiRoute = async (routes, departureTime = new Date(
  */
 export const subscribeLiveOptimization = (vehicleId, destination) => {
   // Note: WebSocket not currently supported for production
-  const wsUrl = `wss://pulsetrack-back.onrender.com/api/routes/live-optimize/${vehicleId}/?destination=${destination}`;
+  const wsUrl = `wss://pulsetrack-uh6i.onrender.com/api/routes/live-optimize/${vehicleId}/?destination=${destination}`;
   return new WebSocket(wsUrl);
 };
 
@@ -629,7 +629,7 @@ const getApiV1Base = () => {
     return 'http://localhost:8000/api/v1';
   }
   // Production: use Render backend
-  return 'https://pulsetrack-back.onrender.com/api/v1';
+  return 'https://pulsetrack-uh6i.onrender.com/api/v1';
 };
 
 const API_V1_BASE = getApiV1Base();

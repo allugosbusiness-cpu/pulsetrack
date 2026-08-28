@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const getApiV1Base = () => {
+  const configured = import.meta.env.VITE_API_BASE_URL;
+  if (configured) return configured.replace(/\/+$/, '') + '/api/v1';
   if (import.meta.env.MODE === 'development') return 'http://localhost:8000/api/v1';
-  return 'https://pulsetrack-back.onrender.com/api/v1';
+  return 'https://pulsetrack-uh6i.onrender.com/api/v1';
 };
 
 const ActivityTable = () => {

@@ -193,7 +193,7 @@ export default function AutoTrailActivation({ onTrailStatusChange, onMissionEven
   const saveMissionTrackingData = async (missionId, trailData) => {
     try {
       const response = await fetch(
-        `https://pulsetrack-back.onrender.com/api/v1/api-missions/${missionId}/tracking/`,
+        `https://pulsetrack-uh6i.onrender.com/api/v1/api-missions/${missionId}/tracking/`,
         {
           method: 'POST',
           headers: {

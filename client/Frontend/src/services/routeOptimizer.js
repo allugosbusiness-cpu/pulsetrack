@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = import.meta.env.MODE === 'development' ? 'http://localhost:8000/api' : 'https://pulsetrack-back.onrender.com/api/v1';
+const API_BASE = import.meta.env.MODE === 'development' ? 'http://localhost:8000/api' : 'https://pulsetrack-uh6i.onrender.com/api/v1';
 
 /**
  * Advanced Route Optimizer Service

@@ -1140,7 +1140,7 @@ function MissionsTable({ missions, trucks = [], drivers = [], onDelete, onRefres
   // Get API base URL for v1 endpoints (works in both dev and prod)
   const getApiV1Base = () => {
     if (import.meta.env.MODE === 'development') return 'http://localhost:8000/api/v1';
-    return 'https://pulsetrack-back.onrender.com/api/v1';
+    return 'https://pulsetrack-uh6i.onrender.com/api/v1';
   };
 
   /**
@@ -1361,7 +1361,7 @@ function MissionsTable({ missions, trucks = [], drivers = [], onDelete, onRefres
       // Use the backend API URL (works in both dev and production)
       const backendUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:8000/api/v1/calculate-distance/'
-        : 'https://pulsetrack-back.onrender.com/api/v1/calculate-distance/';
+        : 'https://pulsetrack-uh6i.onrender.com/api/v1/calculate-distance/';
 
       const response = await fetch(backendUrl, {
         method: 'POST',

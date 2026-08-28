@@ -11,7 +11,7 @@ const NOMINATIM_API = 'https://nominatim.openstreetmap.org/reverse';
 
 const getApiV1Base = () => {
   if (import.meta.env.MODE === 'development') return 'http://localhost:8000/api/v1';
-  return 'https://pulsetrack-back.onrender.com/api/v1';
+  return 'https://pulsetrack-uh6i.onrender.com/api/v1';
 };
 
 export const reverseGeocode = async (lat, lon) => {

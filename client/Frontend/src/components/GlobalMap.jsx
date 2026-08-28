@@ -18,13 +18,13 @@ import '../styles/trailStyles.css';
 // Helper to get API base URL for v1 endpoints
 const getApiV1Base = () => {
   if (import.meta.env.MODE === 'development') return 'http://localhost:8000/api/v1';
-  return 'https://pulsetrack-back.onrender.com/api/v1';
+  return 'https://pulsetrack-uh6i.onrender.com/api/v1';
 };
 
 // Helper to get legacy API base URL (without v1)
 const getApiBase = () => {
   if (import.meta.env.MODE === 'development') return 'http://localhost:8000/api';
-  return 'https://pulsetrack-back.onrender.com/api';
+  return 'https://pulsetrack-uh6i.onrender.com/api';
 };
 
 // Fix Leaflet default marker icons

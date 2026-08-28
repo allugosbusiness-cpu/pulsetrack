@@ -21,7 +21,7 @@ const getApiBaseUrl = () => {
   // Production
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
   if (backendUrl) return `${backendUrl}/api/v1`;
-  return 'https://pulsetrack-back.onrender.com/api/v1';
+  return 'https://pulsetrack-uh6i.onrender.com/api/v1';
 };
 
 export const RETRY_CONFIG = {
