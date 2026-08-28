@@ -1,0 +1,7 @@
+{
+  "framework": "vite",
+  "buildCommand": "cd client/Frontend && npm install && npm run build",
+  "outputDirectory": "client/Frontend/dist",
+  "devCommand": "cd client/Frontend && npm run dev",
+  "installCommand": "cd client/Frontend && npm install"
+}
