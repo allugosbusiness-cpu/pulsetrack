@@ -18,6 +18,20 @@ if str(REPO_ROOT) not in sys.path:
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'server.Logistics.settings')
 
+import django  # noqa: E402
+
+django.setup()
+
+# Create/update the database schema automatically at boot. This ensures a fresh
+# database (e.g. a newly-attached Render Postgres) gets all tables without needing
+# a separate release/migrate step. It's idempotent and safe.
+try:
+    from django.core.management import call_command
+    call_command('migrate', verbosity=0, interactive=False, no_input=True)
+except Exception as _exc:  # pragma: no cover - never block boot on migration issues
+    import logging
+    logging.getLogger(__name__).warning('Startup migrate skipped: %s', _exc)
+
 from django.core.wsgi import get_wsgi_application  # noqa: E402
 
 app = get_wsgi_application()

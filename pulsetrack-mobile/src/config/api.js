@@ -1,15 +1,8 @@
 /**
  * PulseTrack Mobile API Configuration
- * Connect to the PulseTrack backend.
- *
- * Replace FLEET_BACKEND_HOST with the machine's public/reachable IP (or a tunnel
- * URL such as https://your-tunnel.ngrok.io). The Android app will hit this host.
- * Use 0.0.0.0 / 10.0.2.2 for an emulator; use your LAN/public IP for a real device.
+ * Connect to the PulseTrack backend on Render.
  */
-const FLEET_BACKEND_HOST = '10.168.166.180'; // <-- set to your machine's public/LAN IP or tunnel host
-const FLEET_BACKEND_PORT = '8000';
-
-const API_BASE_URL = `http://${FLEET_BACKEND_HOST}:${FLEET_BACKEND_PORT}/api/v1`;
+const API_BASE_URL = 'https://pulsetrack-uh6i.onrender.com/api/v1';
 
 export const API_CONFIG = {
   baseUrl: API_BASE_URL,
