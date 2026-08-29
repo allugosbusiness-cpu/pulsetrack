@@ -894,83 +894,128 @@ export default function GlobalMap({ onTruckSelect, highlightedTruck = null, refr
           return;
         }
 
-        // Group missions by truck
-        const missionsByTruck = {};
-        missions.forEach(mission => {
-          const truckId = mission.truck_identifier;
-          if (!missionsByTruck[truckId]) {
-            missionsByTruck[truckId] = [];
-          }
-          missionsByTruck[truckId].push(mission);
+        // Build truck lookup maps (by UUID id and by identifier/name)
+        const truckById = {};
+        const truckByName = {};
+        trucks.forEach(t => {
+          if (t.id) truckById[t.id] = t;
+          if (t.identifier) truckByName[t.identifier] = t;
         });
 
-        // For each truck, render OSRM-based route from origin to destination
-        for (const truck of trucks) {
-          const truckMissions = missionsByTruck[truck.id] || [];
-          if (!truckMissions.length) continue;
+        // Active mission statuses (the backend stores these in lowercase)
+        const ACTIVE_STATUSES = ['enroute', 'in_progress', 'paused'];
 
-          // Get the active/most recent mission
-          const activeMission = truckMissions.find(m => 
-            m.status === 'ENROUTE' || m.status === 'PAUSED'
-          ) || truckMissions[truckMissions.length - 1];
-
-          if (!activeMission || !activeMission.id) continue;
-
-          // Fetch OSRM route geometry for this mission
-          const routeData = await getMissionRouteGeometry(activeMission.id);
-          
-          if (!routeData || !routeData.geometry) {
-            console.warn(`⚠️ No route geometry for mission ${activeMission.mission_number}`);
-            continue;
+        // Group missions under the truck they belong to (match by UUID or identifier).
+        // The mission payload exposes `truck` (UUID) and `truck_name` (identifier string),
+        // NOT `truck_identifier` -- so we resolve against both to initiate per mission.
+        const groupedMissions = {};
+        missions.forEach(mission => {
+          let truck = (mission.truck && truckById[mission.truck]) || null;
+          if (!truck && mission.truck_name && truckByName[mission.truck_name]) {
+            truck = truckByName[mission.truck_name];
           }
-
-          // Remove old route if exists
-          if (routeLayersRef.current[truck.id]) {
-            map.current.removeLayer(routeLayersRef.current[truck.id]);
+          if (!truck && mission.truck_identifier && truckByName[mission.truck_identifier]) {
+            truck = truckByName[mission.truck_identifier];
           }
-          if (routeLayersRef.current[`route_glow_${truck.id}`]) {
-            map.current.removeLayer(routeLayersRef.current[`route_glow_${truck.id}`]);
+          if (!truck) return;
+
+          if (!groupedMissions[truck.id]) {
+            groupedMissions[truck.id] = { truck, missions: [] };
           }
+          groupedMissions[truck.id].missions.push(mission);
+        });
 
-          // Convert GeoJSON geometry to Leaflet format [lat, lng]
-          const routeGeometry = routeData.geometry;
-          let routeCoords = [];
-          
-          if (routeGeometry.type === 'LineString') {
-            // GeoJSON uses [lon, lat], convert to [lat, lon] for Leaflet
-            routeCoords = routeGeometry.coordinates.map(coord => [coord[1], coord[0]]);
+        // Track the route layers rendered this cycle so we can clean up stale
+        // routes for missions that are no longer active (per-mission lifecycle).
+        const activeRouteKeys = new Set();
+
+        for (const truckId of Object.keys(groupedMissions)) {
+          const { truck, missions } = groupedMissions[truckId];
+
+          // Render ONLY active missions' routes. When a mission starts it enters the
+          // active set (enroute/in_progress) and its route appears; when it completes,
+          // its route is cleaned up below.
+          const activeMissions = missions.filter(m =>
+            ACTIVE_STATUSES.includes(String(m.status || '').toLowerCase())
+          );
+
+          for (const activeMission of activeMissions) {
+            if (!activeMission || !activeMission.id) continue;
+
+            // Fetch OSRM route geometry for this mission
+            const routeData = await getMissionRouteGeometry(activeMission.id);
+
+            if (!routeData || !routeData.geometry) {
+              console.warn(`⚠️ No route geometry for mission ${activeMission.mission_number}`);
+              continue;
+            }
+
+            // Unique layer key per truck+mission so each mission renders independently
+            const routeKey = `${truck.id}::${activeMission.id}`;
+            const glowKey = `route_glow_${routeKey}`;
+
+            // Remove old route if it exists
+            if (routeLayersRef.current[routeKey]) {
+              map.current.removeLayer(routeLayersRef.current[routeKey]);
+            }
+            if (routeLayersRef.current[glowKey]) {
+              map.current.removeLayer(routeLayersRef.current[glowKey]);
+            }
+
+            // Convert GeoJSON geometry to Leaflet format [lat, lng]
+            const routeGeometry = routeData.geometry;
+            let routeCoords = [];
+
+            if (routeGeometry.type === 'LineString') {
+              // GeoJSON uses [lon, lat], convert to [lat, lon] for Leaflet
+              routeCoords = routeGeometry.coordinates.map(coord => [coord[1], coord[0]]);
+            }
+
+            if (routeCoords.length < 2) continue;
+
+            activeRouteKeys.add(routeKey);
+
+            // Draw white glow line underneath for visibility
+            const glowPolyline = L.polyline(routeCoords, {
+              color: 'white',
+              weight: 6,
+              opacity: 0.4,
+              lineCap: 'round',
+              lineJoin: 'round',
+              zIndex: 79,
+            }).addTo(map.current);
+
+            routeLayersRef.current[glowKey] = glowPolyline;
+
+            // Draw main route polyline with truck's color
+            const routeColor = truck.route_color || '#3b82f6';
+            const routePolyline = L.polyline(routeCoords, {
+              color: routeColor,
+              weight: 3,
+              opacity: 0.85,
+              lineCap: 'round',
+              lineJoin: 'round',
+              dashArray: '4, 2',  // Dashed to distinguish from trails
+              zIndex: 80,
+            }).addTo(map.current);
+
+            routeLayersRef.current[routeKey] = routePolyline;
+
+            console.log(`✅ OSRM route loaded for ${truck.id} (${activeMission.mission_number}): ${routeCoords.length} points, ${routeData.distance || 0}m distance`);
           }
-
-          if (routeCoords.length < 2) continue;
-
-          // Draw white glow line underneath for visibility
-          const glowPolyline = L.polyline(routeCoords, {
-            color: 'white',
-            weight: 6,
-            opacity: 0.4,
-            lineCap: 'round',
-            lineJoin: 'round',
-            zIndex: 79,
-          }).addTo(map.current);
-
-          routeLayersRef.current[`route_glow_${truck.id}`] = glowPolyline;
-
-          // Draw main route polyline with truck's color
-          const routeColor = truck.route_color || '#3b82f6';
-          const routePolyline = L.polyline(routeCoords, {
-            color: routeColor,
-            weight: 3,
-            opacity: 0.85,
-            lineCap: 'round',
-            lineJoin: 'round',
-            dashArray: '4, 2',  // Dashed to distinguish from trails
-            zIndex: 80,
-          }).addTo(map.current);
-
-          routeLayersRef.current[truck.id] = routePolyline;
-
-          console.log(`✅ OSRM route loaded for ${truck.id}: ${routeCoords.length} points, ${routeData.distance || 0}m distance`);
         }
+
+        // Remove routes whose missions are no longer active (per-mission cleanup)
+        Object.keys(routeLayersRef.current).forEach(key => {
+          const baseKey = key.replace(/^route_glow_/, '');
+          if (activeRouteKeys.has(baseKey)) return;
+
+          const layer = routeLayersRef.current[key];
+          if (layer) {
+            map.current.removeLayer(layer);
+          }
+          delete routeLayersRef.current[key];
+        });
       } catch (error) {
         console.warn(`⚠️ Could not load routes:`, error.message);
       }

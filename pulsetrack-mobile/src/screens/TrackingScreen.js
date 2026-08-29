@@ -28,6 +28,7 @@ const TrackingScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const [routeCoords, setRouteCoords] = useState([]);
   const [osrmRouteCoords, setOsrmRouteCoords] = useState([]);
+  const [trailPoints, setTrailPoints] = useState([]);
   const [missionStatus, setMissionStatus] = useState('');
   const [autoCompleted, setAutoCompleted] = useState(false);
 
@@ -56,17 +57,41 @@ const TrackingScreen = ({ navigation, route }) => {
     };
   }, []);
 
+  // Accumulate the driven GPS trail while tracking so the map shows the actual
+  // path taken on this mission (initiated per mission, alongside the route).
+  useEffect(() => {
+    if (
+      currentLocation &&
+      Number.isFinite(currentLocation.latitude) &&
+      Number.isFinite(currentLocation.longitude) &&
+      trackingActive
+    ) {
+      setTrailPoints(prev => {
+        const last = prev[prev.length - 1];
+        if (last && last.latitude === currentLocation.latitude && last.longitude === currentLocation.longitude) {
+          return prev;
+        }
+        const next = [...prev];
+        next.push({ latitude: currentLocation.latitude, longitude: currentLocation.longitude });
+        return next.length > 5000 ? next.slice(-5000) : next; // cap to avoid memory bloat
+      });
+    }
+  }, [currentLocation, trackingActive]);
+
   const initTracking = async () => {
     try {
       const session = await storage.getDriverSession();
       setDriverSession(session);
 
-      // Load mission from storage if not passed as param
-      let currentMission = mission;
-      if (!currentMission) {
-        currentMission = await storage.getCurrentMission();
-        setMission(currentMission);
+      // Load mission from storage if not passed as param.
+      // The mission may arrive NESTED inside the start-tracking response
+      // (e.g. { success, message, mission: {...} }). Normalize it so the route
+      // and trail are always initiated against the real mission object.
+      let currentMission = mission || (await storage.getCurrentMission());
+      if (currentMission && currentMission.mission && !currentMission.origin) {
+        currentMission = currentMission.mission;
       }
+      setMission(currentMission);
 
       // Get current GPS position
       const position = await locationService.getCurrentPosition();
@@ -176,6 +201,8 @@ const TrackingScreen = ({ navigation, route }) => {
       const granted = await locationService.requestPermissions();
       if (granted.granted) {
         await locationService.startTracking(driverSession.driver_id);
+        // Start a fresh trail for this new tracking session
+        setTrailPoints([]);
         // Start network monitoring to process offline queue when connectivity restored
         locationService.startNetworkMonitoring();
         setTrackingActive(true);
@@ -255,6 +282,16 @@ const TrackingScreen = ({ navigation, route }) => {
               fillColor="rgba(26, 35, 126, 0.1)"
             />
           </>
+        )}
+
+        {/* Driven trail polyline (actual path taken during this mission) */}
+        {trailPoints.length >= 2 && (
+          <Polyline
+            coordinates={trailPoints}
+            strokeColor="#4CAF50"
+            strokeWidth={3}
+            lineDashPattern={[]}
+          />
         )}
 
         {/* Origin marker */}
