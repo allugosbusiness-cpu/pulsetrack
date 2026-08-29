@@ -149,44 +149,64 @@ const TrackingScreen = ({ navigation, route }) => {
    * This provides turn-by-turn trail following roads (like Google Maps directions)
    */
   const fetchOsrmRoute = async (missionId, originLat, originLng, destLat, destLng) => {
+    const isRealRoadRoute = (geometry) =>
+      geometry &&
+      geometry.type === 'LineString' &&
+      Array.isArray(geometry.coordinates) &&
+      geometry.coordinates.length >= 3;
+
+    const toCoordList = (geometry) =>
+      geometry.coordinates.map(c => ({ latitude: c[1], longitude: c[0] }));
+
+    const downsample = (coords, max = 2000) => {
+      if (coords.length <= max) return coords;
+      const step = Math.ceil(coords.length / max);
+      const out = [];
+      for (let i = 0; i < coords.length; i += step) out.push(coords[i]);
+      if (out[out.length - 1] !== coords[coords.length - 1]) out.push(coords[coords.length - 1]);
+      return out;
+    };
+
     try {
-      // First try to get route geometry from mission endpoint
       const response = await fetch(
         `${API_CONFIG.baseUrl}/dashboard/missions/${missionId}/route-geometry/`,
         { method: 'GET' }
       );
-      
+
       if (response.ok) {
         const data = await response.json();
-        if (data.geometry && data.geometry.coordinates) {
-          // GeoJSON uses [lon, lat] format - convert to [lat, lon] for react-native-maps
-          const osrmCoords = data.geometry.coordinates.map(coord => ({
-            latitude: coord[1],
-            longitude: coord[0],
-          }));
-          setOsrmRouteCoords(osrmCoords);
-          console.log(`✅ OSRM route loaded: ${osrmCoords.length} road-following points`);
+        const geometry = data.geometry;
+        const isFallback =
+          data.fallback === true ||
+          (geometry && Array.isArray(geometry.coordinates) && geometry.coordinates.length < 3);
+
+        if (isRealRoadRoute(geometry) && !isFallback) {
+          setOsrmRouteCoords(downsample(toCoordList(geometry)));
+          console.log(`Road-matched fastest route (backend): ${geometry.coordinates.length} points`);
           return;
         }
+        console.log('Backend returned no real road route; trying direct OSRM...');
+      } else {
+        console.warn(`Backend route-geometry responded ${response.status}; trying direct OSRM...`);
       }
-      
-      // Fallback: compute OSRM route directly  
-      console.log('Falling back to direct OSRM route computation');
-      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${originLng},${originLat};${destLng},${destLat}?overview=full&geometries=geojson`;
+
+      const osrmUrl =
+        `https://router.project-osrm.org/route/v1/driving/${originLng},${originLat};${destLng},${destLat}` +
+        `?overview=full&geometries=geojson&alternatives=false`;
       const osrmResponse = await fetch(osrmUrl);
       if (osrmResponse.ok) {
         const osrmData = await osrmResponse.json();
-        if (osrmData.routes && osrmData.routes[0] && osrmData.routes[0].geometry) {
-          const coords = osrmData.routes[0].geometry.coordinates.map(c => ({
-            latitude: c[1],
-            longitude: c[0],
-          }));
-          setOsrmRouteCoords(coords);
-          console.log(`✅ Direct OSRM route loaded: ${coords.length} road-following points`);
+        const route = osrmData.routes && osrmData.routes[0];
+        if (route && isRealRoadRoute(route.geometry)) {
+          setOsrmRouteCoords(downsample(toCoordList(route.geometry)));
+          console.log(`Fastest OSRM route (direct): ${route.geometry.coordinates.length} points`);
+          return;
         }
       }
+
+      console.warn('No road route available; showing straight-line fallback only');
     } catch (error) {
-      console.warn('⚠️ Could not fetch OSRM route, using straight-line:', error.message);
+      console.warn('Could not fetch OSRM route:', error.message);
     }
   };
 
